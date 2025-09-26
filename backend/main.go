@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -18,9 +20,10 @@ type RecordRequest struct {
 }
 
 type LogEntry struct {
-	Content   string `json:"content"`
-	Duration  string `json:"duration"`
-	Timestamp string `json:"timestamp"`
+	Content         string `json:"content"`
+	Duration        string `json:"duration"`
+	Timestamp       string `json:"timestamp"`
+	RecordTimestamp int64  `json:"-"` // 用于排序，不返回给前端
 }
 
 func main() {
@@ -138,8 +141,9 @@ func writeToLogFile(entry LogEntry, timestamp time.Time) error {
 	// 日志文件名
 	filename := filepath.Join(monthDir, timestamp.Format("2006-01-02")+".log")
 
-	// 格式化日志行：内容|花费时间|时间戳
-	logLine := fmt.Sprintf("%s|%s|%s\n", entry.Content, entry.Duration, entry.Timestamp)
+	// 格式化日志行：内容|花费时间|显示时间戳|记录时间戳
+	recordTimestamp := timestamp.Unix()
+	logLine := fmt.Sprintf("%s|%s|%s|%d\n", entry.Content, entry.Duration, entry.Timestamp, recordTimestamp)
 
 	// 追加写入文件
 	file, err := os.OpenFile(filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
@@ -180,18 +184,37 @@ func getRecordsByDate(date time.Time) ([]LogEntry, error) {
 			continue
 		}
 
-		// 解析格式：内容|花费时间|时间戳
+		// 解析格式：内容|花费时间|显示时间戳|记录时间戳(可选)
 		parts := strings.Split(line, "|")
-		if len(parts) != 3 {
+		if len(parts) < 3 {
 			continue // 跳过格式不正确的行
 		}
 
-		records = append(records, LogEntry{
+		record := LogEntry{
 			Content:   parts[0],
 			Duration:  parts[1],
 			Timestamp: parts[2],
-		})
+		}
+
+		// 如果有第4个字段（记录时间戳），解析它用于排序
+		if len(parts) >= 4 {
+			if ts, err := strconv.ParseInt(parts[3], 10, 64); err == nil {
+				record.RecordTimestamp = ts
+			}
+		} else {
+			// 兼容旧格式，尝试解析显示时间戳
+			if t, err := time.Parse("2006-01-02 15:04:05", parts[2]); err == nil {
+				record.RecordTimestamp = t.Unix()
+			}
+		}
+
+		records = append(records, record)
 	}
+
+	// 按时间戳倒序排序（最新的在前面）
+	sort.Slice(records, func(i, j int) bool {
+		return records[i].RecordTimestamp > records[j].RecordTimestamp
+	})
 
 	return records, nil
 }
