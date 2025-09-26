@@ -47,7 +47,7 @@ cd ..
 
 echo "🔧 检查后端依赖..."
 cd backend
-go mod tidy
+GOSUMDB=sum.golang.org go mod tidy
 if [ $? -ne 0 ]; then
     echo "❌ 后端依赖检查失败"
     exit 1
