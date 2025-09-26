@@ -8,6 +8,7 @@ function App() {
   const [records, setRecords] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState('');
+  const [timeoutId, setTimeoutId] = useState(null);
 
   // 5秒超时处理
   useEffect(() => {
@@ -17,8 +18,13 @@ function App() {
         // 5秒后自动提交，无时间记录
         submitRecord(input, '');
       }, 5000);
+      setTimeoutId(timer);
     }
-    return () => clearTimeout(timer);
+    return () => {
+      if (timer) {
+        clearTimeout(timer);
+      }
+    };
   }, [step, input]);
 
   // 加载今天的记录
@@ -39,6 +45,12 @@ function App() {
   };
 
   const submitRecord = async (content, time) => {
+    // 清除超时定时器，防止重复提交
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+      setTimeoutId(null);
+    }
+    
     setIsLoading(true);
     try {
       const response = await fetch('http://localhost:8080/api/record', {
