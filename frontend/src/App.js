@@ -15,9 +15,9 @@ function App() {
     let timer;
     if (step === 'duration') {
       timer = setTimeout(() => {
-        // 5秒后自动提交，无时间记录
+        // 10秒后自动提交，无时间记录
         submitRecord(input, '');
-      }, 5000);
+      }, 10000);
       setTimeoutId(timer);
     }
     return () => {
@@ -129,7 +129,7 @@ function App() {
           ) : (
             <div>
               <p className="prompt">请输入花费时间（分钟）：</p>
-              <p className="sub-prompt">5秒内未输入将自动忽略时间</p>
+              <p className="sub-prompt">10秒内未输入将自动忽略时间</p>
               <input
                 type="number"
                 value={duration}
